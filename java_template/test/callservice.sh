@@ -13,7 +13,6 @@ echo "7. 1000000"
 echo "8. 1500000"
 
 read -p "Enter your option " option
-echo You entered $option
 
 case $option in
     1) 
@@ -58,12 +57,14 @@ esac
 
 # JSON object to pass to Lambda Function
 fileName=${option}"SalesRecords.csv"
+
+echo You choose the file ${filename} 
 json={"\"row\"":50,"\"col\"":10,"\"bucketname\"":\"${bucketName}\"","\"filename\"":\"${fileName}\""}
 echo $json
 
 
 echo "Invoking Process CSV Lambda function using AWS CLI"
-time output=`aws lambda invoke --invocation-type RequestResponse --function-name projectTestProcessCSV --region us-east-2 --payload $json /dev/stdout | head -n 1 | head -c -2 ; echo`
+time output=`aws lambda invoke --invocation-type RequestResponse --function-name projectTestProcessCSV --region us-east-2 --payload $json --cli-connect-timeout 900 --cli-read-timeout 900 /dev/stdout | head -n 1 | head -c -2 ; echo`
 echo ""
 echo "JSON RESULT:"
 echo $output | jq

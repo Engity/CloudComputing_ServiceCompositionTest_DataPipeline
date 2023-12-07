@@ -35,41 +35,35 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
     // Remove duplicated Order ID
     // Create two new columns Gross Margin and Order Processing Time
     // Transform Order Priority 
-    public static ArrayList<ArrayList<String>> processData(HashMap<String, ArrayList<String>> rawData, ArrayList<String> headers) {
-        int rows = 0;
+    private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
+    public static ArrayList<ArrayList<String>> processData(ArrayList<ArrayList<String>> rawData, ArrayList<String> headers) {
+        int rows = rawData.size();
         int cols = headers.size();
 
         ArrayList<ArrayList<String>> res = new ArrayList<>();
-        res.add(new ArrayList<String>());
-        // Initialized the headers
-        for (int i = 0 ; i < headers.size(); i++){
-            String header = headers.get(i);
-            res.get(0).add(header);
-            rows = Math.max(rows, rawData.get(header).size());
-        }
-       
+        res.add(rawData.get(0));
+        // Initialized the headers       
         res.get(0).add("Gross Margin");
         res.get(0).add("Order Processing Time");
 
         HashSet<String> orderIDSets = new HashSet<>();
-
+        
         // Parse the records by row
-        for (int i = 0; i < rows; i++) {
-            Iterator<String> colIterator = headers.iterator();
+        for (int i = 1; i < rows; i++) {
             // Extract orderID
-            String orderID = rawData.get("Order ID").get(i);
+            String orderID = rawData.get(i).get(6);
             // Only process the record with order id unique
             ArrayList<String> rowRecord = new ArrayList<>();
+        
             if (!orderIDSets.contains(orderID)) {
                 orderIDSets.add(orderID);
                 // Copy every column
-                while (colIterator.hasNext()) {
-                    String header = colIterator.next();
-                    ArrayList<String> tmp = rawData.get(header);
+                for (int j = 0; j < cols; j++){
+                    ArrayList<String> tmp = rawData.get(i);
                     String val = "NULL";
                     if (tmp != null) {
-                        if (header.equals("Order Priority")) {
-                            switch (tmp.get(i)) {
+                        if (headers.get(j).equals("Order Priority")) {
+                            switch (tmp.get(j)) {
                                 case "L":
                                     val = "Low";
                                     break;
@@ -84,22 +78,22 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
                                     break;
                             }
                         } else
-                            val = tmp.get(i);
+                            val = tmp.get(j);
                     }
                     rowRecord.add(val);
                 }
 
                 // Process new data
                 // Gross margin
-                Double profit = Double.parseDouble(rawData.get("Total Profit").get(i));
-                Double revenue = Double.parseDouble(rawData.get("Total Revenue").get(i));
+                Double profit = Double.parseDouble(rawData.get(i).get(13));
+                Double revenue = Double.parseDouble(rawData.get(i).get(11));
                 Double grossMargin = profit / revenue;
                 rowRecord.add(grossMargin.toString());
 
                 // Process Date
                 SimpleDateFormat myFormat = new SimpleDateFormat("dd/MM/yyyy");
-                String inputString1 = rawData.get("Order Date").get(i);
-                String inputString2 = rawData.get("Ship Date").get(i);
+                String inputString1 = rawData.get(i).get(5);
+                String inputString2 = rawData.get(i).get(7);
 
                 try {
                     Date date1 = myFormat.parse(inputString1);
@@ -116,9 +110,9 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
         return res;
     }
 
-    public static HashMap<String, ArrayList<String>> parseCSV(InputStream objectData, ArrayList<String> headerList) {
+    public static ArrayList<ArrayList<String>> parseCSV(InputStream objectData, ArrayList<String> headerList) {
         // Containing the raw data
-        HashMap<String, ArrayList<String>> rawData = new HashMap<>();
+        ArrayList<ArrayList<String>> rawData = new ArrayList<>();
 
         Scanner scanner = new Scanner(objectData);
 
@@ -128,10 +122,9 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
         // Init the headers
         while (lineReader.hasNext()) {
             String header = lineReader.next();
-            headerList.add(header);
-            ArrayList<String> tmp = new ArrayList<>();
-            rawData.put(header, tmp);
+            headerList.add(header);   
         }
+        rawData.add(headerList);
 
         // Read the content of the csv
         while (scanner.hasNext()) {
@@ -140,11 +133,14 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
             lineReader = new Scanner(text);
             lineReader.useDelimiter(",");
             int headerIndex = 0;
+            ArrayList<String> tmp  = new ArrayList<>();
             while (lineReader.hasNext()) {
                 String data = lineReader.next();
-                rawData.get(headerList.get(headerIndex)).add(data);
+                tmp.add(data);
                 headerIndex++;
             }
+
+            rawData.add(tmp);
             lineReader.close();
 
         }
@@ -178,7 +174,7 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
 
         meta.setContentType("text/plain");
         // Create new file on S3
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
+        
         s3Client.putObject(bucketname, fileName, is, meta);
 
         return "File created with cols: " + col + " rows: " + row;
@@ -203,14 +199,14 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
 
         String bucketname = request.getBucketname();
         String filename = request.getFilename();
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
+       
         // get object file using source bucket and srcKey name
         S3Object s3Object = s3Client.getObject(new GetObjectRequest(bucketname, filename));
 
         // get content of the file
         InputStream objectData = s3Object.getObjectContent();
         ArrayList<String> headers = new ArrayList<>();
-        HashMap<String, ArrayList<String>> rawData = parseCSV(objectData, headers);
+        ArrayList<ArrayList<String>> rawData = parseCSV(objectData, headers);
         // HashMap<String, ArrayList<String>> processData = processData(rawData);
         ArrayList<ArrayList<String>> processData2 = processData(rawData, headers);
 
@@ -229,7 +225,7 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
 
         // Set response value
         response.setValue("Filename:" + filename + " processed with " + headers.size() + " columns and "
-                + rawData.get("Region").size() + " rows.\n"
+                + rawData.get(0).size() + " rows.\n"
                 + " Result " + result + "\n");
 
         inspector.consumeResponse(response);
