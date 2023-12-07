@@ -34,8 +34,7 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
     // Process the data as according to the transform guideline in the project
     // Remove duplicated Order ID
     // Create two new columns Gross Margin and Order Processing Time
-    // Transform Order Priority 
-    private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
+    // Transform Order Priority    
     public static ArrayList<ArrayList<String>> processData(ArrayList<ArrayList<String>> rawData, ArrayList<String> headers) {
         int rows = rawData.size();
         int cols = headers.size();
@@ -89,18 +88,18 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
                 Double revenue = Double.parseDouble(rawData.get(i).get(11));
                 Double grossMargin = profit / revenue;
                 rowRecord.add(grossMargin.toString());
-
+                // Australia and Oceania,Tuvalu,Baby Food,Offline,High,5/28/2010,669165933,6/27/2010,9925,255.28,159.42,2533654.00,1582243.50,951410.50,0.3755092447508618,0 -30Thu Apr 05 00:00:00 UTC 2012 Tue Mar 06 00:00:00 UTC 2012
                 // Process Date
-                SimpleDateFormat myFormat = new SimpleDateFormat("dd/MM/yyyy");
+                // 0 -30Thu Apr 05 00:00:00 UTC 2012 Tue Mar 06 00:00:00 UTC 2012
+                SimpleDateFormat myFormat = new SimpleDateFormat("MM/dd/yyyy");
                 String inputString1 = rawData.get(i).get(5);
                 String inputString2 = rawData.get(i).get(7);
 
                 try {
                     Date date1 = myFormat.parse(inputString1);
                     Date date2 = myFormat.parse(inputString2);
-                    Long diff = (date2.getTime() - date1.getTime());
-                    Long days = TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
-                    rowRecord.add(days.toString());
+                    Long diff = (date2.getTime() - date1.getTime()) / 86400000;
+                    rowRecord.add(diff.toString());
                 } catch (Exception e) {
                     rowRecord.add("INVALID DATE");
                 }
@@ -109,7 +108,7 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
         }
         return res;
     }
-
+  
     public static ArrayList<ArrayList<String>> parseCSV(InputStream objectData, ArrayList<String> headerList) {
         // Containing the raw data
         ArrayList<ArrayList<String>> rawData = new ArrayList<>();
@@ -148,7 +147,7 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
         return rawData;
     }
 
-    public static String createCSV(String bucketname, String fileName, ArrayList<ArrayList<String>> data) {
+    public static String createCSV(String bucketname, String fileName, ArrayList<ArrayList<String>> data, AmazonS3 s3Client) {
         int row = 0;
         int col = data.size();
 
@@ -199,8 +198,31 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
 
         String bucketname = request.getBucketname();
         String filename = request.getFilename();
-       
-        // get object file using source bucket and srcKey name
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
+        
+        String result = performTransform(bucketname, filename, s3Client);
+
+        // (OPTIONAL)
+        LambdaLogger logger = context.getLogger();
+        // logger.log("ProcessCSV bucketname:" + bucketname + " filename:" + filename +
+        // " avg-element:" + avg + " total:"
+        // + total);
+        Response response = new Response();
+
+        // Set response value
+        response.setValue(result);
+
+        inspector.consumeResponse(response);
+
+        // ****************END FUNCTION IMPLEMENTATION***************************
+
+        // Collect final information such as total runtime and cpu deltas.
+        inspector.inspectAllDeltas();
+        return inspector.finish();
+    }
+
+    public static String performTransform(String bucketname, String filename, AmazonS3 s3Client){
+         // get object file using source bucket and srcKey name
         S3Object s3Object = s3Client.getObject(new GetObjectRequest(bucketname, filename));
 
         // get content of the file
@@ -214,26 +236,10 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
         // String result = createCSV(bucketname, filename.split(".")[0] + "_result.csv",
         // processData);
         // String result = createCSV(bucketname, "Transform_result.csv", processData);
-        String result = createCSV(bucketname, "Transform_result.csv", processData2);
-
-        // (OPTIONAL)
-        LambdaLogger logger = context.getLogger();
-        // logger.log("ProcessCSV bucketname:" + bucketname + " filename:" + filename +
-        // " avg-element:" + avg + " total:"
-        // + total);
-        Response response = new Response();
-
-        // Set response value
-        response.setValue("Filename:" + filename + " processed with " + headers.size() + " columns and "
+        String result = createCSV(bucketname, "Transform_result.csv", processData2, s3Client);
+        String finalRes = "Filename:" + filename + " processed with " + headers.size() + " columns and "
                 + rawData.get(0).size() + " rows.\n"
-                + " Result " + result + "\n");
-
-        inspector.consumeResponse(response);
-
-        // ****************END FUNCTION IMPLEMENTATION***************************
-
-        // Collect final information such as total runtime and cpu deltas.
-        inspector.inspectAllDeltas();
-        return inspector.finish();
+                + " Result " + result + "\n";
+        return finalRes;
     }
 }

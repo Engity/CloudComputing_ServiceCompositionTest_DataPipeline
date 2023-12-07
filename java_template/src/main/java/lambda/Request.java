@@ -9,6 +9,7 @@ public class Request {
     String name;
     private String bucketname;
     private String filename;
+    private int operationType;
     private int row;
     private int col;
 
@@ -38,6 +39,14 @@ public class Request {
 
     public void setFilename(String name) {
         this.filename = name;
+    }
+
+     public int getOperationType() {
+        return operationType;
+    }
+
+    public void setOperationType(int c) {
+        this.operationType = c;
     }
 
     public int getCol() {
