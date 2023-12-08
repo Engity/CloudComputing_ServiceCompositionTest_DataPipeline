@@ -57,7 +57,10 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
         String filename = request.getFilename();
         
         //Perform transform
-        String result = Transform.performTransform(bucketname, filename, s3Client);
+        ArrayList<ArrayList<String>> transformRes = Transform.performTransform(bucketname, filename, s3Client, true);
+
+        String result = "Processed Rows=" + transformRes.size() + " Cols=" + transformRes.get(0).size();
+
 
 
 
