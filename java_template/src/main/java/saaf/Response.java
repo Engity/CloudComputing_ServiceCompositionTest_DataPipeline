@@ -25,16 +25,9 @@ public class Response {
     public void setValue(String value) {
         this.value = value;
     }
-    private String jsonResult;
-    public String getJsonResult() {
-        return jsonResult;
-    }
 
-    public void setJsonResult(String jsonResult) {
-        this.jsonResult = jsonResult;
-    }
     @Override
     public String toString() {
-        return "value=" + this.getValue() + "JSON RESULT: " + getJsonResult() + " " + super.toString();
+        return "value=" + this.getValue() + super.toString();
     }
 }
