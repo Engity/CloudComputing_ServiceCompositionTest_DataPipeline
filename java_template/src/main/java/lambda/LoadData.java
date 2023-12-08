@@ -169,7 +169,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
 
             // Execute Query 2: Total cost and Total Revenue for each country
             ps = con.prepareStatement(
-                    "SELECT Country, SUM(TotalRevenue) AS Total Revenue, SUM(TotalCost) AS Total Cost FROM SalesData GROUP BY Country;");
+                    "SELECT Country, SUM(TotalRevenue) AS Total_Revenue, SUM(TotalCost) AS Total_Cost FROM SalesData GROUP BY Country;");
             ps.execute();
             rs = ps.executeQuery();
             String formattedJson_2 = resultSetToJson(rs);
@@ -177,7 +177,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
 
             // Execute Query 3: Countries with profit revenue above 30%
             ps = con.prepareStatement(
-                    "SELECT Country, AVG((TotalProfit / TotalRevenue) * 100) AS Profit Margin FROM SalesData GROUP BY Country HAVING Profit Margin > 30");
+                    "SELECT Country, AVG((TotalProfit / TotalRevenue) * 100) AS Profit_Margin FROM SalesData GROUP BY Country HAVING Profit_Margin > 30;");
             ps.execute();
             rs = ps.executeQuery();
             String formattedJson_3 = resultSetToJson(rs);
@@ -185,7 +185,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
 
             // Execute Query 4: Top 15 items sold
             ps = con.prepareStatement(
-                    "SELECT ItemType, SUM(UnitsSold) AS Total Units Sold FROM SalesData GROUP BY ItemType ORDER BY Total Units Sold DESC LIMIT 15");
+                    "SELECT ItemType, SUM(UnitsSold) AS Total_Units_Sold FROM SalesData GROUP BY ItemType ORDER BY Total_Units_Sold DESC LIMIT 15;");
             ps.execute();
             rs = ps.executeQuery();
             String formattedJson_4 = resultSetToJson(rs);
@@ -193,7 +193,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
 
             // Execute Query 5: Total revenue each year for each region
             ps = con.prepareStatement(
-                    "SELECT YEAR(STR_TO_DATE(OrderDate, '%m/%d/%Y')) AS Sales Year, Region, SUM(TotalRevenue) AS Total Revenue FROM SalesData GROUP BY Region, Sales Year ORDER BY Region, Sales Year ASC, Total Revenue DESC");
+                    "SELECT YEAR(STR_TO_DATE(OrderDate, '%m/%d/%Y')) AS Sales_Year, Region, SUM(TotalRevenue) AS Total_Revenue FROM SalesData GROUP BY Region, Sales_Year ORDER BY Region, Sales_Year ASC, Total_Revenue DESC;");
             rs = ps.executeQuery();
             String formattedJson_5 = resultSetToJson(rs);
             rs.close();
