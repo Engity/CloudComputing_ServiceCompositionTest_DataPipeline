@@ -2,7 +2,7 @@
 
 #!/bin/bash
 bucketName="tcss462salesdata"
-functionName="switchBoard"
+transformFunctionName="switchBoard"
 
 echo "Which file would you like to use?"
 echo "1. 100"
@@ -66,17 +66,17 @@ echo $jsonT
 
 
 echo "Invoking Process CSV Lambda function using AWS CLI"
-time output=`aws lambda invoke --invocation-type RequestResponse --function-name switchBoard --region us-east-2 --payload $jsonT --cli-connect-timeout 900 --cli-read-timeout 900 /dev/stdout | head -n 1 | head -c -2 ; echo`
+time output=`aws lambda invoke --invocation-type RequestResponse --function-name $transformFunctionName --region us-east-2 --payload $jsonT --cli-connect-timeout 900 --cli-read-timeout 900 /dev/stdout | head -n 1 | head -c -2 ; echo`
 echo ""
 echo "JSON RESULT:"
 echo $output | jq
 
 #process Function procecssCSVTut5
-
+loadFunctionName="processSalesData"
 jsonL={"\"bucketname\"":\"${bucketName}\"}
 echo "Invoking Lambda function using AWS CLI"
 #time output=`aws lambda invoke --invocation-type RequestResponse --function-name {LAMBDA-FUNCTION-NAME} --region us-east-2 --payload $json /dev/stdout | head -n 1 | head -c -2 ; echo`
-time output=`aws lambda invoke --invocation-type RequestResponse --function-name processSalesData --region us-east-2 --payload $jsonL /dev/stdout | head -n 1 | head -c -2 ; echo`
+time output=`aws lambda invoke --invocation-type RequestResponse --function-name $loadFunctionName --region us-east-2 --payload $jsonL /dev/stdout | head -n 1 | head -c -2 ; echo`
 
 echo ""
 echo "JSON RESULT:"
