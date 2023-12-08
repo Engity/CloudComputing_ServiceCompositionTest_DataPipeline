@@ -1,6 +1,7 @@
 #!/bin/bash
 bucketName="test.project.tcss462.ngt"
-functionName="projectTestProcessCSV"
+transformFunctionName="projectTestProcessCSV"
+loadFunctionName="processSalesData"
 
 echo "Which file would you like to use?"
 echo "1. 100"
@@ -127,7 +128,7 @@ echo "JSON RESULT:"
 echo $output | jq
 
 #process Function procecssCSVTut5
-loadFunctionName="processSalesData"
+
 jsonL={"\"bucketname\"":\"${bucketName}\"}
 echo "Invoking Lambda function using AWS CLI"
 #time output=`aws lambda invoke --invocation-type RequestResponse --function-name {LAMBDA-FUNCTION-NAME} --region us-east-2 --payload $json /dev/stdout | head -n 1 | head -c -2 ; echo`
