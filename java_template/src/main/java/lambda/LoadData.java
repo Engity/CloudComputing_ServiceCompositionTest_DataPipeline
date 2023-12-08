@@ -132,6 +132,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
         + "UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit,GrossMargin,OrderProcessingTime) "
         + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
             try (PreparedStatement ps = con.prepareStatement(insertQuery)) {
+                  int batchSize = 100;
                   for (int i=0 ; i<dataSize ; i++) {
                      ps.setString(1, processedData.get("Region").get(i));
                      ps.setString(2, processedData.get("Country").get(i));
@@ -150,8 +151,12 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
                      ps.setFloat(15, Float.valueOf(processedData.get("Gross Margin").get(i)));
                      ps.setInt(16, Integer.valueOf(processedData.get("Order Processing Time").get(i)));
                      ps.addBatch();
+                     if ((i+1)%batchSize==0 || i == dataSize-1 ) {
+                        ps.executeBatch();
+                        ps.clearBatch();
+                     }
                   }               
-                     ps.executeBatch();
+                     
             }
             con.close();
         } catch (Exception e) {
