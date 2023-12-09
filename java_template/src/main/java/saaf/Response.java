@@ -35,6 +35,6 @@ public class Response {
     }
     @Override
     public String toString() {
-        return "value=" + this.getValue() + "JSON RESULT: " + getJsonResult() + " " + super.toString();
+        return "value=" + this.getValue() + " " + super.toString();
     }
 }
