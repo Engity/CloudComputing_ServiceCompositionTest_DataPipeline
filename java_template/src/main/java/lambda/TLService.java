@@ -158,7 +158,7 @@ public class TLService implements RequestHandler<Request, HashMap<String, Object
                      ps.setFloat(15, Float.valueOf(rawData.get(i).get(14)));
                      ps.setInt(16, Integer.valueOf(rawData.get(i).get(15)));
                      ps.addBatch();
-                     if ((i+1)%batchSize==0 || i == dataSize-1 ) {
+                     if (i%batchSize==0 || i == dataSize-1 ) {
                         ps.executeBatch();
                         ps.clearBatch();
                      }
