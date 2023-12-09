@@ -1,6 +1,6 @@
 #!/bin/bash
 bucketName="test.project.tcss462.ngt"
-switchBoardFunction="switchboard"
+switchBoardFunction="projectTestProcessCSV"
 transformFunctionName="switchBoard"
 loadFunctionName="processSalesData"
 
@@ -11,9 +11,9 @@ echo "3. Query"
 echo "4. TL"
 echo "5. LQ"
 echo "6. TLQ"
-read -p "Enter your option " option
+read -p "Enter your option " option1
 
-case $option in
+case $option1 in
     1) 
     operationType=1
     echo "You chose to perform Transform"
@@ -109,9 +109,9 @@ fi
 # JSON object to pass to Lambda Function
 fileName=${option}"SalesRecords.csv"
 
-echo You choose the file ${filename} 
-jsonT={"\"bucketname\"":\"${bucketName}\"","\"filename\"":\"${fileName}\","\"operationtype\"":\"${operationType}\"","}
-echo $jsonT
+echo You choose the file ${fileName} 
+jsonT={"\"bucketname\"":\"${bucketName}\"","\"filename\"":\"${fileName}\"",""\"operationtype\"":${operationType}"}
+# echo $jsonT
 
 
 echo "Invoking Process CSV Lambda function using AWS CLI"
