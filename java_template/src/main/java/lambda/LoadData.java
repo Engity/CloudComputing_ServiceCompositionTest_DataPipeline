@@ -73,7 +73,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
         headerList = headers;
         return rawData;
     }
-    private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
+  
 
     public static String PerformLoad(String bucketname, String filename, AmazonS3 s3Client) {
        
@@ -150,7 +150,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
 
         String bucketname = request.getBucketname();
         String filename = "Transform_result.csv";
-        
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
         //Perform transform
         String result = PerformLoad(bucketname,  filename, s3Client);
 

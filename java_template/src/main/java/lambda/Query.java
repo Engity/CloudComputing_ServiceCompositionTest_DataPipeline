@@ -27,9 +27,7 @@ import java.util.Properties;
 
 public class Query implements RequestHandler<Request, HashMap<String, Object>> {
 
-    private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
-
-    public String performQuery(Boolean saveCSV, String bucketname) {
+    public static String performQuery(Boolean saveCSV, String bucketname, AmazonS3 s3Client) {
         // Load data.
         Properties properties = new Properties();
         try {
@@ -107,7 +105,7 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
             rs.close();
             con.close();
             if (saveCSV) {
-                createCSV(bucketname, queryResults);
+                createCSV(bucketname, queryResults, s3Client);
             }
             // Set the formatted results into the response
             con.close();
@@ -117,7 +115,7 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
         }
     }
 
-    public static String createCSV(String bucketname, String result) {
+    public static String createCSV(String bucketname, String result, AmazonS3 s3Client) {
         String fileName = "Querry_results.csv";
 
         // Create new file on S3
@@ -126,7 +124,7 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
         return "File created with query result: " + result;
     }
 
-    private String resultSetToString(ResultSet rs, int number) throws Exception {
+    private static String resultSetToString(ResultSet rs, int number) throws Exception {
         int rowCount = 0;
 
         ResultSetMetaData metaData = rs.getMetaData();
@@ -141,7 +139,7 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
                 + ", Query processed columns: " + columnCount;
     }
 
-    private String resultSetToJson(ResultSet rs, int number) throws Exception {
+    private static String resultSetToJson(ResultSet rs, int number) throws Exception {
         JsonObject jsonResult = new JsonObject();
         JsonArray columns = new JsonArray();
         JsonArray rows = new JsonArray();
@@ -188,9 +186,9 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
         Inspector inspector = new Inspector();
         inspector.inspectAll();
         Response response = new Response();
-
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
         String bucketName = request.getBucketname();
-        String processedQueryResults = performQuery(true, bucketName);
+        String processedQueryResults = performQuery(true, bucketName, s3Client);
         
         
         logger.log("Query Results: " + processedQueryResults);

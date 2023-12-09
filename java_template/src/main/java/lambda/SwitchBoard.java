@@ -34,9 +34,9 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
     // Process the data as according to the transform guideline in the project
     // Remove duplicated Order ID
     // Create two new columns Gross Margin and Order Processing Time
-    // Transform Order Priority 
+    // Transform Order Priority
     private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
-    
+
     /**
      * Lambda Function Handler
      * 
@@ -55,14 +55,36 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
 
         String bucketname = request.getBucketname();
         String filename = request.getFilename();
-        
-        //Perform transform
-        ArrayList<ArrayList<String>> transformRes = Transform.performTransform(bucketname, filename, s3Client, true);
+        String result = "";
+        Integer operationType = request.getOperationtype();
+        switch (operationType) {
+            case 1:
+                // Perform transform
+                ArrayList<ArrayList<String>> transformRes = Transform.performTransform(bucketname, filename, s3Client,
+                        true);
 
-        String result = "Processed Rows=" + transformRes.size() + " Cols=" + transformRes.get(0).size();
-
-
-
+                result = "Performing Transform with Processed Rows=" + transformRes.size() + " Cols=" + transformRes.get(0).size();
+                break;
+            case 2:
+                result = "Performing Load " + LoadData.PerformLoad(bucketname, "Transform_result.csv", s3Client);
+                break;
+            case 3:
+                // Perform Query
+                result = "Performing Query " + Query.performQuery(true, bucketname, s3Client);
+                break;
+            case 4:
+                // Perform Transform Load
+                result = "Performing TL " + TLService.PerformTL(bucketname,filename, s3Client);
+                break;
+            case 5:
+                // Perform Load Query
+                result = "Performing LQ";
+                break;
+            case 6:
+                // Perform TLQ
+                result = "Performing TLQ";
+                break;
+        }
 
         // (OPTIONAL)
         LambdaLogger logger = context.getLogger();
