@@ -73,53 +73,20 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
         headerList = headers;
         return rawData;
     }
-    /**
-     * Lambda Function Handler
-     *
-     * @param request Request POJO with defined variables from Request.java
-     * @param context
-     * @return HashMap that Lambda will automatically convert into JSON.
-     */
-    public HashMap<String, Object> handleRequest(Request request, Context context) {
+    private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
 
-        // Collect inital data.
-        Inspector inspector = new Inspector();
-        inspector.inspectAll();
-        // Process data in CSV 
-        String bucketname = request.getBucketname();
-        String filename = "Transform_result.csv";
-
-        StringWriter sw = new StringWriter();
-        byte[] bytes = sw.toString().getBytes(StandardCharsets.UTF_8);
-        InputStream is = new ByteArrayInputStream(bytes);
-        ObjectMetadata meta = new ObjectMetadata();
-        meta.setContentLength(bytes.length);
-        meta.setContentType("text/plain");
-        meta.setContentLength(bytes.length);
-        // Create new file on S3
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
+    public static String PerformLoad(String bucketname, String filename, AmazonS3 s3Client) {
+       
         // get object file using source bucket and srcKey name
         S3Object s3Object = s3Client.getObject(new GetObjectRequest(bucketname, filename));
-
         // get content of the file
         InputStream objectData = s3Object.getObjectContent();
         ArrayList<String> headers = new ArrayList<>();
         HashMap<String, ArrayList<String>> processedData = new HashMap<String, ArrayList<String>>();
         processedData = parseCSV(objectData, headers);
-        
-        LambdaLogger logger = context.getLogger();
-        logger.log("ProcessCSV bucketname:" + bucketname + " filename:" + filename);
-        
-        
-         Response response = new Response();
-        //Load data into database.
          Properties properties = new Properties();
          try {
-           
-           
             properties.load(new FileInputStream("db.properties"));
-
-            
             String url = properties.getProperty("url");
             String username = properties.getProperty("username");
             String password = properties.getProperty("password");
@@ -160,16 +127,49 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
             }
             con.close();
         } catch (Exception e) {
-            logger.log("Got an exception working with MySQL! ");
-            logger.log(e.getMessage());
+            System.out.println("Got an exception working with MySQL! ");
+            System.out.println(e.getMessage());
         }
+        String finalRes= "Database: " + properties.getProperty("database") + " Table:" + properties.getProperty("table") + " processed.";
+        return finalRes;
+    }
+    /**
+     * Lambda Function Handler
+     * @param request Request POJO with defined variables from Request.java
+     * @param context
+     * @return HashMap that Lambda will automatically convert into JSON.
+     */
+    public HashMap<String, Object> handleRequest(Request request, Context context) {
+
+        // Collect inital data.
+        Inspector inspector = new Inspector();
+        inspector.inspectAll();
+
+        // ****************START FUNCTION IMPLEMENTATION*************************
+        // Add custom key/value attribute to SAAF's output. (OPTIONAL)
+
+        String bucketname = request.getBucketname();
+        String filename = request.getFilename();
         
-       
-        response.setValue("Database: " + properties.getProperty("database") + " Table:" + properties.getProperty("table") + " processed.");
+        //Perform transform
+        String result = PerformLoad(bucketname,  filename, s3Client);
+
+
+        // (OPTIONAL)
+        LambdaLogger logger = context.getLogger();
+        logger.log("test: "+result);
+        // logger.log("ProcessCSV bucketname:" + bucketname + " filename:" + filename +
+        // " avg-element:" + avg + " total:"
+        // + total);
+        Response response = new Response();
+
+        // Set response value
+        response.setValue(result);
 
         inspector.consumeResponse(response);
 
         // ****************END FUNCTION IMPLEMENTATION***************************
+
         // Collect final information such as total runtime and cpu deltas.
         inspector.inspectAllDeltas();
         return inspector.finish();
