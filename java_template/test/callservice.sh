@@ -1,8 +1,6 @@
 #!/bin/bash
 bucketName="test.project.tcss462.ngt"
 switchBoardFunction="projectTestProcessCSV"
-transformFunctionName="switchBoard"
-loadFunctionName="processSalesData"
 
 echo "Which operation would you like to perform?"
 echo "1. Transform"

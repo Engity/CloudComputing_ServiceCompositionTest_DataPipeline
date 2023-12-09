@@ -79,7 +79,12 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
                 break;
             case 5:
                 // Perform Load Query
-                result = "Performing LQ";
+                ArrayList<String> headers = new ArrayList<>();
+                result = "Performing LQ " + LQService.performLQ(
+                    true, 
+                    bucketname, 
+                    filename,
+                    headers, s3Client);
                 break;
             case 6:
                 // Perform TLQ
