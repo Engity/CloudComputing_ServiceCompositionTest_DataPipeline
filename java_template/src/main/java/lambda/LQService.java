@@ -10,34 +10,105 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
-import java.io.ByteArrayInputStream;
+
+import saaf.Inspector;
+import saaf.Response;
 
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.util.*;
 
-import saaf.Inspector;
-import saaf.Response;
 
-import java.util.HashMap;
-import java.util.Properties;
+/**
+ *
+ * @author kokinh11
+ */
+public class LQService implements RequestHandler<Request, HashMap<String, Object>> {
 
-public class Query implements RequestHandler<Request, HashMap<String, Object>> {
+    public static String performLQ(Boolean saveCSV, String bucketname, String filename, ArrayList<String> headerList, AmazonS3 s3Client) {
+        
+        /////////Load////////
+        S3Object s3Object = s3Client.getObject(new GetObjectRequest(bucketname, filename));
+        InputStream objectData = s3Object.getObjectContent();
+        // Containing the headers
+        ArrayList<String> headers = new ArrayList<>();
+        // Containing the raw data
+        HashMap<String, ArrayList<String>> rawData = new HashMap<>();
+        Scanner scanner = new Scanner(objectData);
+        // Read the headlines
+        Scanner lineReader = new Scanner(scanner.nextLine());
+        lineReader.useDelimiter(",");
+        // Init the headers
+        while (lineReader.hasNext()) {
+            String header = lineReader.next();
+            headers.add(header);
+            ArrayList<String> tmp = new ArrayList<>();
+            rawData.put(header, tmp);
+        }
+        // Read the content of the csv
+        while (scanner.hasNext()) {
+            String text = scanner.nextLine();
+            // // Read the numbers
+            lineReader = new Scanner(text);
+            lineReader.useDelimiter(",");
+            int headerIndex = 0;
+            while (lineReader.hasNext()) {
+                String data = lineReader.next();
+                rawData.get(headers.get(headerIndex)).add(data);
+                headerIndex++;
+            }
+            lineReader.close();
 
-    public static String performQuery(Boolean saveCSV, String bucketname, AmazonS3 s3Client) {
-        // Load data.
+        }
+        scanner.close();
+        headerList = headers;
         Properties properties = new Properties();
         try {
-
             properties.load(new FileInputStream("db.properties"));
-
             String url = properties.getProperty("url");
             String username = properties.getProperty("username");
             String password = properties.getProperty("password");
             Connection con = DriverManager.getConnection(url, username, password);
+
+            //All ArrayList has the same size
+            int dataSize = rawData.get("Region").size();
+
+            String insertQuery = "INSERT INTO SalesData (Region, Country, ItemType, SalesChannel, OrderPriority, OrderDate, OrderID, ShipDate, "
+                    + "UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit,GrossMargin,OrderProcessingTime) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement ps = con.prepareStatement(insertQuery)) {
+                int batchSize = 100;
+                for (int i = 0; i < dataSize; i++) {
+                    ps.setString(1, rawData.get("Region").get(i));
+                    ps.setString(2, rawData.get("Country").get(i));
+                    ps.setString(3, rawData.get("Item Type").get(i));
+                    ps.setString(4, rawData.get("Sales Channel").get(i));
+                    ps.setString(5, rawData.get("Order Priority").get(i));
+                    ps.setString(6, rawData.get("Order Date").get(i));
+                    ps.setInt(7, Integer.valueOf(rawData.get("Order ID").get(i)));
+                    ps.setString(8, rawData.get("Ship Date").get(i));
+                    ps.setInt(9, Integer.valueOf(rawData.get("Units Sold").get(i)));
+                    ps.setDouble(10, Double.valueOf(rawData.get("Unit Price").get(i)));
+                    ps.setDouble(11, Double.valueOf(rawData.get("Unit Cost").get(i)));
+                    ps.setDouble(12, Double.valueOf(rawData.get("Total Revenue").get(i)));
+                    ps.setDouble(13, Double.valueOf(rawData.get("Total Cost").get(i)));
+                    ps.setDouble(14, Double.valueOf(rawData.get("Total Profit").get(i)));
+                    ps.setFloat(15, Float.valueOf(rawData.get("Gross Margin").get(i)));
+                    ps.setInt(16, Integer.valueOf(rawData.get("Order Processing Time").get(i)));
+                    ps.addBatch();
+                    if ((i + 1) % batchSize == 0 || i == dataSize - 1) {
+                        ps.executeBatch();
+                        ps.clearBatch();
+                    }
+                }
+            }
+            
+            /////////Query////////
             String queryResults ="";
             String rawQueryResult ="";
             
@@ -107,11 +178,15 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
             if (saveCSV) {
                 createCSV(bucketname, rawQueryResult, s3Client);
             }
-            // Set the formatted results into the response
             con.close();
-            return queryResults;
+            
+            String finalRes = "Database: " + properties.getProperty("database") + 
+            " Table:" + properties.getProperty("table") + " processed.\n" +
+            "Query Processed: " + queryResults;
+            
+            return finalRes;
         } catch (Exception e) {
-            return null;
+            return e.getMessage();
         }
     }
 
@@ -135,7 +210,7 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
         }
 
         return "Query " + number + ": "
-                + "Query processed columns: " + columnCount;
+                + ", Query processed columns: " + columnCount;
     }
 
     private static String resultSetToJson(ResultSet rs, int number) throws Exception {
@@ -179,20 +254,35 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
         return jsonResult.toString();
     }
 
-    @Override
     public HashMap<String, Object> handleRequest(Request request, Context context) {
-        LambdaLogger logger = context.getLogger();
+//        Boolean saveCSV, String bucketname, String filename, 
+//        ArrayList<String> headerList, AmazonS3 s3Client
+
+        // Collect inital data.
         Inspector inspector = new Inspector();
         inspector.inspectAll();
-        Response response = new Response();
+        
+        // ****************START FUNCTION IMPLEMENTATION*************************
+        // Add custom key/value attribute to SAAF's output. (OPTIONAL)
+        ArrayList<String> headers = new ArrayList<>();
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
         String bucketName = request.getBucketname();
-        String processedQueryResults = performQuery(true, bucketName, s3Client);
-        
-        
-        logger.log("Query Results: " + processedQueryResults);
+        String fileName = request.getFilename();
+        //Perform Load-Querry
+        String processedQueryResults = performLQ(
+                true, 
+                bucketName, 
+                fileName,
+                headers, s3Client);
+
+        // (OPTIONAL)
+        LambdaLogger logger = context.getLogger();
+        logger.log("test: "+ processedQueryResults);
+        Response response = new Response();
+        // Set response value
         response.setValue(processedQueryResults);
         inspector.consumeResponse(response);
+
         // ****************END FUNCTION IMPLEMENTATION***************************
         // Collect final information such as total runtime and cpu deltas.
         inspector.inspectAllDeltas();
