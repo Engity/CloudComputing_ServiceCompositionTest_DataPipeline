@@ -29,7 +29,7 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
 
     private static AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
 
-    public HashMap<String, String> performQuery() {
+    public String performQuery(Boolean saveCSV, String bucketname) {
         // Load data.
         Properties properties = new Properties();
         try {
@@ -40,13 +40,19 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
             String username = properties.getProperty("username");
             String password = properties.getProperty("password");
             Connection con = DriverManager.getConnection(url, username, password);
-            HashMap<String, String> queryResults = new HashMap<>();
+            String queryResults ="";
+            String rawQueryResult ="";
+            
             // Execute Query 1: All data from database
             PreparedStatement ps = con.prepareStatement(
                     "SELECT * FROM SalesData;");
             ResultSet rs = ps.executeQuery();
-            queryResults.put("formattedJson_1", resultSetToJson(rs, 1));
-            queryResults.put("formattedString_1", resultSetToString(rs, 1));
+            if (saveCSV){
+                rawQueryResult += resultSetToJson(rs, 1) + "\n";
+                queryResults += resultSetToString(rs, 1) + "\n";
+            } else {
+                queryResults += resultSetToString(rs, 1) + "\n";
+            }
             rs.close();
 
             // Execute Query 2: Total cost and Total Revenue for each country
@@ -54,8 +60,12 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
                     "SELECT Country, SUM(TotalRevenue) AS Total_Revenue, SUM(TotalCost) AS Total_Cost FROM SalesData GROUP BY Country;");
             ps.execute();
             rs = ps.executeQuery();
-            queryResults.put("formattedJson_2", resultSetToJson(rs, 2));
-            queryResults.put("formattedString_2", resultSetToString(rs, 2));
+            if (saveCSV){
+                rawQueryResult += resultSetToJson(rs, 2) + "\n";
+                queryResults += resultSetToString(rs, 2) + "\n";
+            } else {
+                queryResults += resultSetToString(rs, 2) + "\n";
+            }
             rs.close();
 
             // Execute Query 3: Countries with profit revenue above 30%
@@ -63,8 +73,12 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
                     "SELECT Country, AVG((TotalProfit / TotalRevenue) * 100) AS Profit_Margin FROM SalesData GROUP BY Country HAVING Profit_Margin > 30;");
             ps.execute();
             rs = ps.executeQuery();
-            queryResults.put("formattedJson_3", resultSetToJson(rs, 3));
-            queryResults.put("formattedString_3", resultSetToString(rs, 3));
+            if (saveCSV) {
+                rawQueryResult += resultSetToJson(rs, 3) + "\n";
+                queryResults += resultSetToString(rs, 3) + "\n";
+            } else {
+                queryResults += resultSetToString(rs, 3) + "\n";
+            }
             rs.close();
 
             // Execute Query 4: Top 15 items sold
@@ -72,19 +86,29 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
                     "SELECT ItemType, SUM(UnitsSold) AS Total_Units_Sold FROM SalesData GROUP BY ItemType ORDER BY Total_Units_Sold DESC LIMIT 15;");
             ps.execute();
             rs = ps.executeQuery();
-            queryResults.put("formattedJson_4", resultSetToJson(rs, 4));
-            queryResults.put("formattedString_4", resultSetToString(rs, 4));
+            if (saveCSV) {
+                rawQueryResult += resultSetToJson(rs, 4) + "\n";
+                queryResults += resultSetToString(rs, 4) + "\n";
+            } else {
+                queryResults += resultSetToString(rs, 4) + "\n";
+            }
             rs.close();
 
             // Execute Query 5: Total revenue each year for each region
             ps = con.prepareStatement(
                     "SELECT YEAR(STR_TO_DATE(OrderDate, '%m/%d/%Y')) AS Sales_Year, Region, SUM(TotalRevenue) AS Total_Revenue FROM SalesData GROUP BY Region, Sales_Year ORDER BY Region, Sales_Year ASC, Total_Revenue DESC;");
             rs = ps.executeQuery();
-            queryResults.put("formattedJson_5", resultSetToJson(rs, 5));
-            queryResults.put("formattedString_5", resultSetToString(rs, 5));
+            if (saveCSV) {
+                rawQueryResult += resultSetToJson(rs, 5) + "\n";
+                queryResults += resultSetToString(rs, 5) + "\n";
+            } else {
+                queryResults += resultSetToString(rs, 5) + "\n";
+            }
             rs.close();
-
             con.close();
+            if (saveCSV) {
+                createCSV(bucketname, queryResults);
+            }
             // Set the formatted results into the response
             con.close();
             return queryResults;
@@ -166,22 +190,11 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
         Response response = new Response();
 
         String bucketName = request.getBucketname();
-        HashMap<String, String> queryResults = performQuery();
-
-        String rawQueryResult = "";
-        String processedQueryResult = "";
-
-        for (String key : queryResults.keySet()) {
-            if (key.startsWith("formattedJson")) {
-                rawQueryResult += queryResults.get(key) + "\n";
-            } else if (key.startsWith("formattedString")) {
-                processedQueryResult += queryResults.get(key) + "\n";
-            }
-        }
-
-        createCSV(bucketName, rawQueryResult);
-        logger.log("Query Results: " + processedQueryResult);
-        response.setValue(processedQueryResult);
+        String processedQueryResults = performQuery(true, bucketName);
+        
+        
+        logger.log("Query Results: " + processedQueryResults);
+        response.setValue(processedQueryResults);
         inspector.consumeResponse(response);
         // ****************END FUNCTION IMPLEMENTATION***************************
         // Collect final information such as total runtime and cpu deltas.
