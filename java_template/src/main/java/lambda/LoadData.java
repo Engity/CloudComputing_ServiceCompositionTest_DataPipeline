@@ -149,7 +149,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
         // Add custom key/value attribute to SAAF's output. (OPTIONAL)
 
         String bucketname = request.getBucketname();
-        String filename = request.getFilename();
+        String filename = "Transform_result.csv";
         
         //Perform transform
         String result = PerformLoad(bucketname,  filename, s3Client);
