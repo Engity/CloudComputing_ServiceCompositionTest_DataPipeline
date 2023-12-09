@@ -63,7 +63,8 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
                 ArrayList<ArrayList<String>> transformRes = Transform.performTransform(bucketname, filename, s3Client,
                         true);
 
-                result = "Performing Transform with Processed Rows=" + transformRes.size() + " Cols=" + transformRes.get(0).size();
+                result = "Performing Transform with Processed Rows=" + transformRes.size() + " Cols="
+                        + transformRes.get(0).size();
                 break;
             case 2:
                 result = "Performing Load " + LoadData.PerformLoad(bucketname, "Transform_result.csv", s3Client);
@@ -74,7 +75,7 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
                 break;
             case 4:
                 // Perform Transform Load
-                result = "Performing TL " + TLService.PerformTL(bucketname,filename, s3Client);
+                result = "Performing TL " + TLService.PerformTL(bucketname, filename, s3Client);
                 break;
             case 5:
                 // Perform Load Query
@@ -82,7 +83,9 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
                 break;
             case 6:
                 // Perform TLQ
-                result = "Performing TLQ";
+                String resultTL = "Performing TL " + TLService.PerformTL(bucketname, filename, s3Client);
+                String resultQ = Query.performQuery(true, bucketname, s3Client);
+                result = "Performing TLQ " + resultTL + " " + resultQ;
                 break;
         }
 
