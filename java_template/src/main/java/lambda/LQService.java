@@ -191,7 +191,7 @@ public class LQService implements RequestHandler<Request, HashMap<String, Object
     }
 
     public static String createCSV(String bucketname, String result, AmazonS3 s3Client) {
-        String fileName = "Querry_results.csv";
+        String fileName = "LQ_results.csv";
 
         // Create new file on S3
         s3Client.putObject(bucketname, fileName, result);
@@ -267,7 +267,7 @@ public class LQService implements RequestHandler<Request, HashMap<String, Object
         ArrayList<String> headers = new ArrayList<>();
         AmazonS3 s3Client = AmazonS3ClientBuilder.standard().build();
         String bucketName = request.getBucketname();
-        String fileName = request.getFilename();
+        String fileName = "Transform_result.csv";
         //Perform Load-Querry
         String processedQueryResults = performLQ(
                 true, 
