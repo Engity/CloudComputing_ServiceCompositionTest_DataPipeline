@@ -1,32 +1,59 @@
 package lambda;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.LambdaLogger;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import java.io.ByteArrayInputStream;
-
 import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.util.HashMap;
+import java.util.Properties;
+
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
+import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 import saaf.Inspector;
 import saaf.Response;
 
-import java.util.HashMap;
-import java.util.Properties;
-
 public class Query implements RequestHandler<Request, HashMap<String, Object>> {
+    public static String performDelete() {
+        // Load data.
+        Properties properties = new Properties();
+        try {
 
+            properties.load(new FileInputStream("db.properties"));
+
+            String url = properties.getProperty("url");
+            String username = properties.getProperty("username");
+            String password = properties.getProperty("password");
+            Connection con = DriverManager.getConnection(url, username, password);
+            String queryResults ="Dropped Table and Created Table";
+           
+            
+            // Execute Query 1: All data from database
+            PreparedStatement ps = con.prepareStatement("DROP TABLE SalesData;");
+            ps.executeUpdate();
+            
+
+            // Execute Query 2: Total cost and Total Revenue for each country
+            ps = con.prepareStatement(
+                    "CREATE TABLE SalesData (Region VARCHAR(255),Country VARCHAR(255),ItemType VARCHAR (255),SalesChannel VARCHAR (255),OrderPriority VARCHAR(10),OrderDate VARCHAR(100),OrderID INT PRIMARY KEY,ShipDate VARCHAR(100), UnitsSold INT, UnitPrice DOUBLE, UnitCost DOUBLE,TotalRevenue DOUBLE,TotalCost DOUBLE,TotalProfit DOUBLE,GrossMargin FLOAT, OrderProcessingTime INT);");
+            ps.executeUpdate();
+        
+            
+
+           
+            return queryResults;
+        } catch (Exception e) {
+            System.out.println("Loi ne "+e.getMessage());
+            return null;
+        }
+    }
     public static String performQuery(Boolean saveCSV, String bucketname, AmazonS3 s3Client) {
         // Load data.
         Properties properties = new Properties();

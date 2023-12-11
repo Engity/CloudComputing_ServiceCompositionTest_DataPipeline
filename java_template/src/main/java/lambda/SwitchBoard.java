@@ -92,6 +92,11 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
                 String resultQ = Query.performQuery(true, bucketname, s3Client);
                 result = "Performing TLQ " + resultTL + " " + resultQ;
                 break;
+            case 7:
+            String resultDel = Query.performDelete();
+            System.out.print(resultDel);
+            result = resultDel;
+            break;
         }
 
         // (OPTIONAL)
