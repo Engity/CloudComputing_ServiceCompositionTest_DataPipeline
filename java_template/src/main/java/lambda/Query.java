@@ -42,7 +42,25 @@ public class Query implements RequestHandler<Request, HashMap<String, Object>> {
 
             // Execute Query 2: Total cost and Total Revenue for each country
             ps = con.prepareStatement(
-                    "CREATE TABLE SalesData (Region VARCHAR(255),Country VARCHAR(255),ItemType VARCHAR (255),SalesChannel VARCHAR (255),OrderPriority VARCHAR(10),OrderDate VARCHAR(100),OrderID INT PRIMARY KEY,ShipDate VARCHAR(100), UnitsSold INT, UnitPrice DOUBLE, UnitCost DOUBLE,TotalRevenue DOUBLE,TotalCost DOUBLE,TotalProfit DOUBLE,GrossMargin FLOAT, OrderProcessingTime INT);");
+                    "CREATE TABLE SalesData (\n" + //
+                            "    ID INT AUTO_INCREMENT PRIMARY KEY,\n" + //
+                            "    Region VARCHAR(255),\n" + //
+                            "    Country VARCHAR(255),\n" + //
+                            "    ItemType VARCHAR(255),\n" + //
+                            "    SalesChannel VARCHAR(255),\n" + //
+                            "    OrderPriority VARCHAR(10),\n" + //
+                            "    OrderDate VARCHAR(100),\n" + //
+                            "    OrderID VARCHAR(100),\n" + //
+                            "    ShipDate VARCHAR(100),\n" + //
+                            "    UnitsSold INT,\n" + //
+                            "    UnitPrice DOUBLE,\n" + //
+                            "    UnitCost DOUBLE,\n" + //
+                            "    TotalRevenue DOUBLE,\n" + //
+                            "    TotalCost DOUBLE,\n" + //
+                            "    TotalProfit DOUBLE,\n" + //
+                            "    GrossMargin FLOAT,\n" + //
+                            "    OrderProcessingTime INT\n" + //
+                            ");");
             ps.executeUpdate();
         
             

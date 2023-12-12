@@ -34,12 +34,9 @@ import java.util.Scanner;
  */
 public class LoadData implements RequestHandler<Request, HashMap<String, Object>> {
 
-    public static HashMap<String, ArrayList<String>> parseCSV(InputStream objectData, ArrayList<String> headerList) {
-        // Containing the headers
-        ArrayList<String> headers = new ArrayList<>();
-
+    public static ArrayList<ArrayList<String>> parseCSV(InputStream objectData, ArrayList<String> headerList) {
         // Containing the raw data
-        HashMap<String, ArrayList<String>> rawData = new HashMap<>();
+        ArrayList<ArrayList<String>> rawData = new ArrayList<>();
 
         Scanner scanner = new Scanner(objectData);
 
@@ -49,10 +46,9 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
         // Init the headers
         while (lineReader.hasNext()) {
             String header = lineReader.next();
-            headers.add(header);
-            ArrayList<String> tmp = new ArrayList<>();
-            rawData.put(header, tmp);
+            headerList.add(header);
         }
+        rawData.add(headerList);
 
         // Read the content of the csv
         while (scanner.hasNext()) {
@@ -61,18 +57,21 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
             lineReader = new Scanner(text);
             lineReader.useDelimiter(",");
             int headerIndex = 0;
+            ArrayList<String> tmp = new ArrayList<>();
             while (lineReader.hasNext()) {
                 String data = lineReader.next();
-                rawData.get(headers.get(headerIndex)).add(data);
+                tmp.add(data);
                 headerIndex++;
             }
+
+            rawData.add(tmp);
             lineReader.close();
 
         }
         scanner.close();
-        headerList = headers;
         return rawData;
     }
+
   
 
     public static String PerformLoad(String bucketname, String filename, AmazonS3 s3Client) {
@@ -82,7 +81,7 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
         // get content of the file
         InputStream objectData = s3Object.getObjectContent();
         ArrayList<String> headers = new ArrayList<>();
-        HashMap<String, ArrayList<String>> processedData = new HashMap<String, ArrayList<String>>();
+        ArrayList<ArrayList<String>> processedData = new ArrayList<ArrayList<String>>();
         processedData = parseCSV(objectData, headers);
          Properties properties = new Properties();
          try {
@@ -93,38 +92,39 @@ public class LoadData implements RequestHandler<Request, HashMap<String, Object>
             Connection con = DriverManager.getConnection(url, username, password);
 
             //All ArrayList has the same size
-            int dataSize = processedData.get("Region").size();
-    
-            String insertQuery = "INSERT INTO SalesData (Region, Country, ItemType, SalesChannel, OrderPriority, OrderDate, OrderID, ShipDate, "
+            int dataSize = processedData.size();
+            System.out.println("datasize: "+dataSize);
+            String insertQuery = "INSERT INTO SalesData (ID,Region, Country, ItemType, SalesChannel, OrderPriority, OrderDate, OrderID, ShipDate, "
         + "UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit,GrossMargin,OrderProcessingTime) "
-        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
-            try (PreparedStatement ps = con.prepareStatement(insertQuery)) {
-                  int batchSize = 100;
-                  for (int i=0 ; i<dataSize ; i++) {
-                     ps.setString(1, processedData.get("Region").get(i));
-                     ps.setString(2, processedData.get("Country").get(i));
-                     ps.setString(3, processedData.get("Item Type").get(i));
-                     ps.setString(4, processedData.get("Sales Channel").get(i));
-                     ps.setString(5, processedData.get("Order Priority").get(i));
-                     ps.setString(6, processedData.get("Order Date").get(i));
-                     ps.setInt(7, Integer.valueOf(processedData.get("Order ID").get(i)));
-                     ps.setString(8, processedData.get("Ship Date").get(i));
-                     ps.setInt(9, Integer.valueOf(processedData.get("Units Sold").get(i)));
-                     ps.setDouble(10, Double.valueOf(processedData.get("Unit Price").get(i)));
-                     ps.setDouble(11, Double.valueOf(processedData.get("Unit Cost").get(i)));
-                     ps.setDouble(12, Double.valueOf(processedData.get("Total Revenue").get(i)));
-                     ps.setDouble(13, Double.valueOf(processedData.get("Total Cost").get(i)));
-                     ps.setDouble(14, Double.valueOf(processedData.get("Total Profit").get(i)));
-                     ps.setFloat(15, Float.valueOf(processedData.get("Gross Margin").get(i)));
-                     ps.setInt(16, Integer.valueOf(processedData.get("Order Processing Time").get(i)));
-                     ps.addBatch();
-                     if ((i+1)%batchSize==0 || i == dataSize-1 ) {
-                        ps.executeBatch();
-                        ps.clearBatch();
-                     }
-                  }               
-                     
-            }
+        + "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
+        try (PreparedStatement ps = con.prepareStatement(insertQuery)) {
+            int batchSize = 100;
+            for (int i=1 ; i<dataSize ; i++) {
+                ps.setInt(1, i);
+                ps.setString(2, processedData.get(i).get(0));
+                ps.setString(3, processedData.get(i).get(1));
+                ps.setString(4, processedData.get(i).get(2));
+                ps.setString(5, processedData.get(i).get(3));
+                ps.setString(6, processedData.get(i).get(4));
+                ps.setString(7, processedData.get(i).get(5));
+                ps.setInt(8, Integer.valueOf(processedData.get(i).get(6)));
+                ps.setString(9, processedData.get(i).get(7));
+                ps.setInt(10, Integer.valueOf(processedData.get(i).get(8)));
+                ps.setDouble(11, Double.valueOf(processedData.get(i).get(9)));
+                ps.setDouble(12, Double.valueOf(processedData.get(i).get(10)));
+                ps.setDouble(13, Double.valueOf(processedData.get(i).get(11)));
+                ps.setDouble(14, Double.valueOf(processedData.get(i).get(12)));
+                ps.setDouble(15, Double.valueOf(processedData.get(i).get(13)));
+                ps.setFloat(16, Float.valueOf(processedData.get(i).get(14)));
+                ps.setInt(17, Integer.valueOf(processedData.get(i).get(15)));
+                ps.addBatch();
+               if (i%batchSize==0 || i == dataSize-1 ) {
+                  ps.executeBatch();
+                  ps.clearBatch();
+               }
+            }               
+               
+      }
             con.close();
         } catch (Exception e) {
             System.out.println("Got an exception working with MySQL! ");

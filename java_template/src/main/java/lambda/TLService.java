@@ -136,28 +136,29 @@ public class TLService implements RequestHandler<Request, HashMap<String, Object
             //All ArrayList has the same size
             int dataSize = rawData.size();
     
-            String insertQuery = "INSERT INTO SalesData (Region, Country, ItemType, SalesChannel, OrderPriority, OrderDate, OrderID, ShipDate, "
+            String insertQuery = "INSERT INTO SalesData (ID, Region, Country, ItemType, SalesChannel, OrderPriority, OrderDate, OrderID, ShipDate, "
         + "UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit,GrossMargin,OrderProcessingTime) "
-        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
+        + "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
             try (PreparedStatement ps = con.prepareStatement(insertQuery)) {
                   int batchSize = 100;
                   for (int i=1 ; i<dataSize ; i++) {
-                     ps.setString(1, rawData.get(i).get(0));
-                     ps.setString(2, rawData.get(i).get(1));
-                     ps.setString(3, rawData.get(i).get(2));
-                     ps.setString(4, rawData.get(i).get(3));
-                     ps.setString(5, rawData.get(i).get(4));
-                     ps.setString(6, rawData.get(i).get(5));
-                     ps.setInt(7, Integer.valueOf(rawData.get(i).get(6)));
-                     ps.setString(8, rawData.get(i).get(7));
-                     ps.setInt(9, Integer.valueOf(rawData.get(i).get(8)));
-                     ps.setDouble(10, Double.valueOf(rawData.get(i).get(9)));
-                     ps.setDouble(11, Double.valueOf(rawData.get(i).get(10)));
-                     ps.setDouble(12, Double.valueOf(rawData.get(i).get(11)));
-                     ps.setDouble(13, Double.valueOf(rawData.get(i).get(12)));
-                     ps.setDouble(14, Double.valueOf(rawData.get(i).get(13)));
-                     ps.setFloat(15, Float.valueOf(rawData.get(i).get(14)));
-                     ps.setInt(16, Integer.valueOf(rawData.get(i).get(15)));
+                     ps.setInt(1, i);
+                     ps.setString(2, rawData.get(i).get(0));
+                     ps.setString(3, rawData.get(i).get(1));
+                     ps.setString(4, rawData.get(i).get(2));
+                     ps.setString(5, rawData.get(i).get(3));
+                     ps.setString(6, rawData.get(i).get(4));
+                     ps.setString(7, rawData.get(i).get(5));
+                     ps.setInt(8, Integer.valueOf(rawData.get(i).get(6)));
+                     ps.setString(9, rawData.get(i).get(7));
+                     ps.setInt(10, Integer.valueOf(rawData.get(i).get(8)));
+                     ps.setDouble(11, Double.valueOf(rawData.get(i).get(9)));
+                     ps.setDouble(12, Double.valueOf(rawData.get(i).get(10)));
+                     ps.setDouble(13, Double.valueOf(rawData.get(i).get(11)));
+                     ps.setDouble(14, Double.valueOf(rawData.get(i).get(12)));
+                     ps.setDouble(15, Double.valueOf(rawData.get(i).get(13)));
+                     ps.setFloat(16, Float.valueOf(rawData.get(i).get(14)));
+                     ps.setInt(17, Integer.valueOf(rawData.get(i).get(15)));
                      ps.addBatch();
                      if (i%batchSize==0 || i == dataSize-1 ) {
                         ps.executeBatch();
