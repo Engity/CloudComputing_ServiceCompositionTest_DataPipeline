@@ -292,6 +292,7 @@ public class Transform implements RequestHandler<Request, HashMap<String, Object
             // Only process orderID that does not duplicate
             String orderId = tmp.get(6);
             if (!orderIDSets.contains(orderId)) {
+                orderIDSets.add(orderId);
                 Double profit = Double.parseDouble(tmp.get(13));
                 Double revenue = Double.parseDouble(tmp.get(11));
                 Double grossMargin = profit / revenue;
