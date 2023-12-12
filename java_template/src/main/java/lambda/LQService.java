@@ -35,10 +35,8 @@ public class LQService implements RequestHandler<Request, HashMap<String, Object
         /////////Load////////
         S3Object s3Object = s3Client.getObject(new GetObjectRequest(bucketname, filename));
         InputStream objectData = s3Object.getObjectContent();
-        // Containing the headers
-        ArrayList<String> headers = new ArrayList<>();
         // Containing the raw data
-        HashMap<String, ArrayList<String>> rawData = new HashMap<>();
+        ArrayList<ArrayList<String>> rawData = new ArrayList<>();
         Scanner scanner = new Scanner(objectData);
         // Read the headlines
         Scanner lineReader = new Scanner(scanner.nextLine());
@@ -46,10 +44,10 @@ public class LQService implements RequestHandler<Request, HashMap<String, Object
         // Init the headers
         while (lineReader.hasNext()) {
             String header = lineReader.next();
-            headers.add(header);
-            ArrayList<String> tmp = new ArrayList<>();
-            rawData.put(header, tmp);
+            headerList.add(header);
         }
+        rawData.add(headerList);
+
         // Read the content of the csv
         while (scanner.hasNext()) {
             String text = scanner.nextLine();
@@ -57,16 +55,18 @@ public class LQService implements RequestHandler<Request, HashMap<String, Object
             lineReader = new Scanner(text);
             lineReader.useDelimiter(",");
             int headerIndex = 0;
+            ArrayList<String> tmp = new ArrayList<>();
             while (lineReader.hasNext()) {
                 String data = lineReader.next();
-                rawData.get(headers.get(headerIndex)).add(data);
+                tmp.add(data);
                 headerIndex++;
             }
+
+            rawData.add(tmp);
             lineReader.close();
 
         }
         scanner.close();
-        headerList = headers;
         Properties properties = new Properties();
         try {
             properties.load(new FileInputStream("db.properties"));
@@ -76,37 +76,39 @@ public class LQService implements RequestHandler<Request, HashMap<String, Object
             Connection con = DriverManager.getConnection(url, username, password);
 
             //All ArrayList has the same size
-            int dataSize = rawData.get("Region").size();
-
-            String insertQuery = "INSERT INTO SalesData (Region, Country, ItemType, SalesChannel, OrderPriority, OrderDate, OrderID, ShipDate, "
-                    + "UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit,GrossMargin,OrderProcessingTime) "
-                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement ps = con.prepareStatement(insertQuery)) {
-                int batchSize = 100;
-                for (int i = 0; i < dataSize; i++) {
-                    ps.setString(1, rawData.get("Region").get(i));
-                    ps.setString(2, rawData.get("Country").get(i));
-                    ps.setString(3, rawData.get("Item Type").get(i));
-                    ps.setString(4, rawData.get("Sales Channel").get(i));
-                    ps.setString(5, rawData.get("Order Priority").get(i));
-                    ps.setString(6, rawData.get("Order Date").get(i));
-                    ps.setInt(7, Integer.valueOf(rawData.get("Order ID").get(i)));
-                    ps.setString(8, rawData.get("Ship Date").get(i));
-                    ps.setInt(9, Integer.valueOf(rawData.get("Units Sold").get(i)));
-                    ps.setDouble(10, Double.valueOf(rawData.get("Unit Price").get(i)));
-                    ps.setDouble(11, Double.valueOf(rawData.get("Unit Cost").get(i)));
-                    ps.setDouble(12, Double.valueOf(rawData.get("Total Revenue").get(i)));
-                    ps.setDouble(13, Double.valueOf(rawData.get("Total Cost").get(i)));
-                    ps.setDouble(14, Double.valueOf(rawData.get("Total Profit").get(i)));
-                    ps.setFloat(15, Float.valueOf(rawData.get("Gross Margin").get(i)));
-                    ps.setInt(16, Integer.valueOf(rawData.get("Order Processing Time").get(i)));
-                    ps.addBatch();
-                    if ((i + 1) % batchSize == 0 || i == dataSize - 1) {
-                        ps.executeBatch();
-                        ps.clearBatch();
-                    }
-                }
-            }
+            int dataSize = rawData.size();
+            System.out.println("datasize: "+dataSize);
+            String insertQuery = "INSERT INTO SalesData (ID,Region, Country, ItemType, SalesChannel, OrderPriority, OrderDate, OrderID, ShipDate, "
+        + "UnitsSold, UnitPrice, UnitCost, TotalRevenue, TotalCost, TotalProfit,GrossMargin,OrderProcessingTime) "
+        + "VALUES (?,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"; 
+        try (PreparedStatement ps = con.prepareStatement(insertQuery)) {
+            int batchSize = 100;
+            for (int i=1 ; i<dataSize ; i++) {
+                ps.setInt(1, i);
+                ps.setString(2, rawData.get(i).get(0));
+                ps.setString(3, rawData.get(i).get(1));
+                ps.setString(4, rawData.get(i).get(2));
+                ps.setString(5, rawData.get(i).get(3));
+                ps.setString(6, rawData.get(i).get(4));
+                ps.setString(7, rawData.get(i).get(5));
+                ps.setInt(8, Integer.valueOf(rawData.get(i).get(6)));
+                ps.setString(9, rawData.get(i).get(7));
+                ps.setInt(10, Integer.valueOf(rawData.get(i).get(8)));
+                ps.setDouble(11, Double.valueOf(rawData.get(i).get(9)));
+                ps.setDouble(12, Double.valueOf(rawData.get(i).get(10)));
+                ps.setDouble(13, Double.valueOf(rawData.get(i).get(11)));
+                ps.setDouble(14, Double.valueOf(rawData.get(i).get(12)));
+                ps.setDouble(15, Double.valueOf(rawData.get(i).get(13)));
+                ps.setFloat(16, Float.valueOf(rawData.get(i).get(14)));
+                ps.setInt(17, Integer.valueOf(rawData.get(i).get(15)));
+                ps.addBatch();
+               if (i%batchSize==0 || i == dataSize-1 ) {
+                  ps.executeBatch();
+                  ps.clearBatch();
+               }
+            }               
+               
+      }
             
             /////////Query////////
             String queryResults ="";
