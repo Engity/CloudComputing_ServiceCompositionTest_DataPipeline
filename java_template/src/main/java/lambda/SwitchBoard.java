@@ -83,7 +83,7 @@ public class SwitchBoard implements RequestHandler<Request, HashMap<String, Obje
                 result = "Performing LQ " + LQService.performLQ(
                     true, 
                     bucketname, 
-                    filename,
+                    "Transform_result.csv",
                     headers, s3Client);
                 break;
             case 6:
